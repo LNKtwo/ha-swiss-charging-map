@@ -1,0 +1,13 @@
+{
+  "domain": "swiss_charging_map",
+  "name": "Swiss Charging Map",
+  "codeowners": ["@LNKtwo"],
+  "config_flow": true,
+  "dependencies": ["http"],
+  "documentation": "https://github.com/LNKtwo/ha-swiss-charging-map",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/LNKtwo/ha-swiss-charging-map/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

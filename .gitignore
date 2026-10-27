@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.idea/
+.vscode/
+prusuino_base/
+chargeprice_docs/
+agytest.txt
+stdin_ok.txt
+skip_ok.txt
+cmd_ran.txt
+build.log
+build.done

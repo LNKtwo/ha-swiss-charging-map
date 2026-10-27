@@ -1,0 +1,83 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Ladestationen Schweiz (ich-tanke-strom.ch)",
+        "description": "Wähle, was eingerichtet werden soll: eine live-filterbare Übersicht aller Stationen in einem Umkreis, oder eine einzelne Favoriten-Station, unabhängig von einem Standort verfolgt.",
+        "data": {
+          "mode": "Modus"
+        }
+      },
+      "radius": {
+        "title": "Umkreis-Übersicht",
+        "description": "Richtet die Ladestations-Verfolgung rund um einen Standort ein, basierend auf der offiziellen Schweizer Plattform ich-tanke-strom.ch (BFE / EnergieSchweiz / swisstopo). Breiten-/Längengrad sind standardmässig der Home-Assistant-Heimatstandort. Integration erneut hinzufügen für einen anderen Radius oder Standort. Filter (Mindestleistung, Steckertyp, Status, Betreiber) werden danach live über number-/select-Entitäten eingestellt. Der Radius ist auf 30 km begrenzt — grössere Gebiete machen den Quell-Server langsam (20–40+ s pro Abruf) und würden Home Assistant mit Tausenden Entitäten fluten.",
+        "data": {
+          "latitude": "Breitengrad",
+          "longitude": "Längengrad",
+          "radius_km": "Radius (km, max. 30)",
+          "chargeprice_api_key": "Chargeprice API-Schlüssel (optional — kostenloser Demo-Key: insights.chargeprice.app/signup?demo=true). Ergänzt Min./Max. CHF/kWh pro Station und einen Günstigster-Preis-Sensor.",
+          "chargeprice_currency": "Chargeprice-Währung (Standard: CHF)",
+          "price_match_radius_m": "Preis-Abgleichsradius in Metern (Standard: 150)"
+        }
+      },
+      "favorite": {
+        "title": "Favoriten-Station",
+        "description": "Gib die EvseID der Station direkt ein (z.B. per QR-Code am Lader, oder nachgeschlagen auf ich-tanke-strom.ch), oder lass das Feld leer und suche stattdessen in der Nähe eines Standorts — du bekommst dann auf dem nächsten Bildschirm eine Auswahlliste. Integration erneut hinzufügen für einen weiteren Favoriten.",
+        "data": {
+          "station_id": "Stations-EvseID oder Standort-ChargingStationId (optional — leer lassen um stattdessen zu suchen)",
+          "latitude": "Breitengrad (nur verwendet falls EvseID leer)",
+          "longitude": "Längengrad (nur verwendet falls EvseID leer)",
+          "radius_km": "Suchradius (km, max. 30 — nur verwendet wenn EvseID leer ist)",
+          "min_power_kw": "Mindestleistung (kW, nur verwendet falls EvseID leer)",
+          "plug_type": "Steckertyp (nur verwendet falls EvseID leer)"
+        }
+      },
+      "favorite_pick": {
+        "title": "Favoriten-Station auswählen",
+        "description": "{count} Stationen in der Nähe gefunden, nächstgelegene zuerst. Einträge mit 📍 sind ganze Standorte (alle dortigen Ladepunkte zu einem Favoriten zusammengefasst) statt eines einzelnen Anschlusses.",
+        "data": {
+          "station_id": "Station",
+          "favorite_name": "Eigener Name (optional)"
+        }
+      },
+      "favorite_scope": {
+        "title": "Einzelner Ladepunkt oder ganzer Standort?",
+        "description": "{evse_id} ist einer von {count} Ladepunkten am Standort {site}. Nur diesen Ladepunkt favorisieren oder den ganzen Standort mit allen Ladepunkten?",
+        "data": {
+          "favorite_scope": "Umfang",
+          "favorite_name": "Eigener Name (optional)"
+        }
+      },
+      "favorite_confirm": {
+        "title": "Favorit bestätigen",
+        "description": "Gefunden: {what}. Du kannst vor dem Anlegen einen eigenen Namen vergeben.",
+        "data": {
+          "favorite_name": "Eigener Name (optional)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Diese Standort-/Umkreis-Kombination oder Station ist bereits konfiguriert."
+    },
+    "error": {
+      "cannot_connect": "ich-tanke-strom.ch konnte nicht erreicht werden.",
+      "station_not_found": "Keine Station mit dieser EvseID gefunden.",
+      "no_stations_found": "Keine Stationen in diesem Umkreis gefunden.",
+      "no_evse_id": "Diese Station hat keine EvseID und kann nicht als Favorit verfolgt werden."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sensoren pro Steckertyp",
+        "description": "Jeder ausgewählte Steckertyp erhält einen eigenen Sensor, der die freien Ladepunkte dieses Typs in diesem Umkreis zählt. Diese Sensoren berücksichtigen die Filter Mindestleistung und Betreiber, ignorieren aber die Live-Filter Steckertyp und Status — sie behalten ihre Bedeutung, während die Karte gefiltert wird.",
+        "data": {
+          "plug_type_sensors": "Steckertypen mit eigenem Sensor"
+        }
+      }
+    },
+    "abort": {
+      "no_options": "Nur Umkreis-Einträge haben Optionen. Favoriten werden beim Hinzufügen konfiguriert."
+    }
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Bornes de recharge Suisse (ich-tanke-strom.ch)",
+        "description": "Choisissez ce que vous voulez configurer : un aperçu filtrable en direct de toutes les bornes dans un rayon, ou une seule borne favorite suivie indépendamment de tout emplacement.",
+        "data": {
+          "mode": "Mode"
+        }
+      },
+      "radius": {
+        "title": "Aperçu par rayon",
+        "description": "Configure le suivi des bornes de recharge autour d'un emplacement, à partir de la plateforme suisse officielle ich-tanke-strom.ch (OFEN / SuisseEnergie / swisstopo). La latitude/longitude correspondent par défaut à l'emplacement de votre domicile Home Assistant. Ajoutez à nouveau l'intégration pour un autre rayon ou emplacement. Les filtres (puissance minimale, type de connecteur, statut, exploitant) se règlent ensuite en direct via des entités number/select. Le rayon est limité à 30 km — des zones plus grandes ralentissent le serveur source (20–40+ s par requête) et inonderaient Home Assistant de milliers d'entités.",
+        "data": {
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "radius_km": "Rayon (km, max. 30)"
+        }
+      },
+      "favorite": {
+        "title": "Borne favorite",
+        "description": "Entrez directement l'EvseID de la borne (par ex. via un QR code sur la borne, ou recherché sur ich-tanke-strom.ch), ou laissez vide et cherchez plutôt près d'un emplacement — vous obtiendrez une liste à choisir sur l'écran suivant. Ajoutez à nouveau l'intégration pour une autre favorite.",
+        "data": {
+          "station_id": "EvseID de la borne ou ChargingStationId du site (optionnel — laisser vide pour rechercher à la place)",
+          "latitude": "Latitude (utilisée seulement si EvseID est vide)",
+          "longitude": "Longitude (utilisée seulement si EvseID est vide)",
+          "radius_km": "Rayon de recherche (km, max. 30 — utilisé seulement si l'EvseID est vide)",
+          "min_power_kw": "Puissance minimale (kW, utilisée seulement si EvseID est vide)",
+          "plug_type": "Type de connecteur (utilisé seulement si EvseID est vide)"
+        }
+      },
+      "favorite_pick": {
+        "title": "Choisir votre borne favorite",
+        "description": "{count} bornes trouvées à proximité, les plus proches en premier. Les entrées marquées d'un 📍 sont des sites entiers (tous les points de charge combinés en une seule favorite) plutôt qu'un seul connecteur.",
+        "data": {
+          "station_id": "Borne",
+          "favorite_name": "Nom personnalisé (optionnel)"
+        }
+      },
+      "favorite_scope": {
+        "title": "Un seul point de charge ou tout le site ?",
+        "description": "{evse_id} est l'un des {count} points de charge du site {site}. Ajouter uniquement ce point de charge aux favoris, ou tout le site avec tous ses points de charge ?",
+        "data": {
+          "favorite_scope": "Portée",
+          "favorite_name": "Nom personnalisé (optionnel)"
+        }
+      },
+      "favorite_confirm": {
+        "title": "Confirmer le favori",
+        "description": "Trouvé : {what}. Vous pouvez lui donner un nom personnalisé avant de le créer.",
+        "data": {
+          "favorite_name": "Nom personnalisé (optionnel)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Cette combinaison emplacement/rayon ou cette borne est déjà configurée."
+    },
+    "error": {
+      "cannot_connect": "ich-tanke-strom.ch n'a pas pu être atteint.",
+      "station_not_found": "Aucune borne trouvée avec cet EvseID.",
+      "no_stations_found": "Aucune borne trouvée dans ce rayon.",
+      "no_evse_id": "Cette borne n'a pas d'EvseID et ne peut pas être suivie comme favorite."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Capteurs par type de connecteur",
+        "description": "Chaque type de connecteur sélectionné reçoit son propre capteur comptant les points de charge disponibles de ce type dans ce rayon. Ces capteurs respectent les filtres puissance minimale et exploitant, mais ignorent les filtres en direct type de connecteur et statut — ils gardent leur signification pendant que la carte est filtrée.",
+        "data": {
+          "plug_type_sensors": "Types de connecteur avec capteur dédié"
+        }
+      }
+    },
+    "abort": {
+      "no_options": "Seules les entrées par rayon ont des options. Les favoris sont configurés lors de leur ajout."
+    }
+  }
+}

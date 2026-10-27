@@ -1,0 +1,83 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Charging Stations Switzerland (ich-tanke-strom.ch)",
+        "description": "Choose what to set up: a live-filterable overview of all stations within a radius, or a single favorite station tracked independently of any location.",
+        "data": {
+          "mode": "Mode"
+        }
+      },
+      "radius": {
+        "title": "Radius overview",
+        "description": "Sets up charging station tracking around a location, sourced from the official Swiss ich-tanke-strom.ch platform (BFE / EnergieSchweiz / swisstopo). Latitude/longitude default to your Home Assistant home location. Add the integration again for a different radius or location. Filters (minimum power, plug type, status, operator) are adjusted afterwards live via number/select entities. The radius is capped at 30 km — larger areas make the source server slow (20-40+ s per fetch) and would flood Home Assistant with thousands of entities.",
+        "data": {
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "radius_km": "Radius (km, max. 30)",
+          "chargeprice_api_key": "Chargeprice API key (optional — free demo key: insights.chargeprice.app/signup?demo=true). Adds min/max CHF/kWh per station and a cheapest-charger sensor.",
+          "chargeprice_currency": "Chargeprice price currency (default CHF)",
+          "price_match_radius_m": "Price match radius in meters (default 150)"
+        }
+      },
+      "favorite": {
+        "title": "Favorite station",
+        "description": "Enter the station's EvseID directly (e.g. from a QR code on the charger, or looked up on ich-tanke-strom.ch), or leave it empty and search near a location instead — you'll get a list to pick from on the next screen. Add the integration again for another favorite.",
+        "data": {
+          "station_id": "Station EvseID or whole-site ChargingStationId (optional — leave empty to search instead)",
+          "latitude": "Latitude (used only if EvseID is empty)",
+          "longitude": "Longitude (used only if EvseID is empty)",
+          "radius_km": "Search radius (km, max. 30 — used only if EvseID is empty)",
+          "min_power_kw": "Minimum power (kW, used only if EvseID is empty)",
+          "plug_type": "Plug type (used only if EvseID is empty)"
+        }
+      },
+      "favorite_pick": {
+        "title": "Pick your favorite station",
+        "description": "{count} stations found nearby, closest first. Entries marked with 📍 are whole sites (all charge points there combined into one favorite) instead of a single connector.",
+        "data": {
+          "station_id": "Station",
+          "favorite_name": "Custom name (optional)"
+        }
+      },
+      "favorite_scope": {
+        "title": "One charge point or the whole site?",
+        "description": "{evse_id} is one of {count} charge points at {site}. Pin only this charge point, or the whole site with all its charge points?",
+        "data": {
+          "favorite_scope": "Scope",
+          "favorite_name": "Custom name (optional)"
+        }
+      },
+      "favorite_confirm": {
+        "title": "Confirm favorite",
+        "description": "Found: {what}. You can give it a custom name before it is created.",
+        "data": {
+          "favorite_name": "Custom name (optional)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This location/radius or station is already configured."
+    },
+    "error": {
+      "cannot_connect": "ich-tanke-strom.ch could not be reached.",
+      "station_not_found": "No station with this EvseID was found.",
+      "no_stations_found": "No stations found within this radius.",
+      "no_evse_id": "This station has no EvseID and can't be tracked as a favorite."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Per-plug-type sensors",
+        "description": "Each selected plug type gets its own sensor counting the available charge points of that type within this radius. These sensors respect the minimum-power and operator filters but ignore the live plug-type and status filters, so they keep their meaning while the map is being filtered.",
+        "data": {
+          "plug_type_sensors": "Plug types with a dedicated sensor"
+        }
+      }
+    },
+    "abort": {
+      "no_options": "Only radius entries have options. Favorites are configured when they are added."
+    }
+  }
+}

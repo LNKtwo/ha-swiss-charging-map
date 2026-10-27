@@ -1,0 +1,80 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Stazioni di ricarica Svizzera (ich-tanke-strom.ch)",
+        "description": "Scegli cosa configurare: una panoramica filtrabile in tempo reale di tutte le stazioni in un raggio, oppure una singola stazione preferita monitorata indipendentemente da qualsiasi posizione.",
+        "data": {
+          "mode": "Modalità"
+        }
+      },
+      "radius": {
+        "title": "Panoramica per raggio",
+        "description": "Configura il monitoraggio delle stazioni di ricarica attorno a una posizione, basato sulla piattaforma svizzera ufficiale ich-tanke-strom.ch (UFE / SvizzeraEnergia / swisstopo). Latitudine/longitudine corrispondono per default alla posizione di casa di Home Assistant. Aggiungi di nuovo l'integrazione per un altro raggio o posizione. I filtri (potenza minima, tipo di connettore, stato, gestore) si regolano poi in tempo reale tramite entità number/select. Il raggio è limitato a 30 km — aree più grandi rallentano il server sorgente (20–40+ s per richiesta) e inonderebbero Home Assistant con migliaia di entità.",
+        "data": {
+          "latitude": "Latitudine",
+          "longitude": "Longitudine",
+          "radius_km": "Raggio (km, max. 30)"
+        }
+      },
+      "favorite": {
+        "title": "Stazione preferita",
+        "description": "Inserisci direttamente l'EvseID della stazione (ad es. tramite QR code sulla colonnina, o cercato su ich-tanke-strom.ch), oppure lascia vuoto e cerca invece vicino a una posizione — nella schermata successiva otterrai un elenco tra cui scegliere. Aggiungi di nuovo l'integrazione per un'altra preferita.",
+        "data": {
+          "station_id": "EvseID della stazione o ChargingStationId della sede (opzionale — lascia vuoto per cercare invece)",
+          "latitude": "Latitudine (usata solo se EvseID è vuoto)",
+          "longitude": "Longitudine (usata solo se EvseID è vuoto)",
+          "radius_km": "Raggio di ricerca (km, max. 30 — usato solo se l'EvseID è vuoto)",
+          "min_power_kw": "Potenza minima (kW, usata solo se EvseID è vuoto)",
+          "plug_type": "Tipo di connettore (usato solo se EvseID è vuoto)"
+        }
+      },
+      "favorite_pick": {
+        "title": "Scegli la tua stazione preferita",
+        "description": "{count} stazioni trovate nelle vicinanze, le più vicine per prime. Le voci contrassegnate con 📍 sono siti interi (tutti i punti di ricarica lì combinati in un unico preferito) invece di un singolo connettore.",
+        "data": {
+          "station_id": "Stazione",
+          "favorite_name": "Nome personalizzato (opzionale)"
+        }
+      },
+      "favorite_scope": {
+        "title": "Un singolo punto di ricarica o l'intero sito?",
+        "description": "{evse_id} è uno dei {count} punti di ricarica del sito {site}. Aggiungere ai preferiti solo questo punto di ricarica o l'intero sito con tutti i suoi punti?",
+        "data": {
+          "favorite_scope": "Ambito",
+          "favorite_name": "Nome personalizzato (opzionale)"
+        }
+      },
+      "favorite_confirm": {
+        "title": "Conferma preferito",
+        "description": "Trovato: {what}. Puoi assegnare un nome personalizzato prima di crearlo.",
+        "data": {
+          "favorite_name": "Nome personalizzato (opzionale)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Questa combinazione di posizione/raggio o questa stazione è già configurata."
+    },
+    "error": {
+      "cannot_connect": "Impossibile raggiungere ich-tanke-strom.ch.",
+      "station_not_found": "Nessuna stazione trovata con questo EvseID.",
+      "no_stations_found": "Nessuna stazione trovata in questo raggio.",
+      "no_evse_id": "Questa stazione non ha un EvseID e non può essere monitorata come preferita."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sensori per tipo di connettore",
+        "description": "Ogni tipo di connettore selezionato riceve un proprio sensore che conta i punti di ricarica disponibili di quel tipo in questo raggio. Questi sensori rispettano i filtri potenza minima e gestore, ma ignorano i filtri live tipo di connettore e stato — mantengono il loro significato mentre la mappa viene filtrata.",
+        "data": {
+          "plug_type_sensors": "Tipi di connettore con sensore dedicato"
+        }
+      }
+    },
+    "abort": {
+      "no_options": "Solo le voci per raggio hanno opzioni. I preferiti vengono configurati al momento dell'aggiunta."
+    }
+  }
+}
