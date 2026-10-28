@@ -68,6 +68,16 @@ def _as_list(value) -> list:
     return value if isinstance(value, list) else [value]
 
 
+def _keeps_existing(existing: dict | None, new: dict) -> bool:
+    """Whether to keep an already collected record over a new one with the
+    same EvseID. Some charge points are published twice by different feeds
+    (observed 2026-10-28 at Mall of Switzerland: once by MOVE with live
+    status, once via Energie 360° with "Unknown") — the live one must win."""
+    if existing is None:
+        return False
+    return existing["status"] != "Unknown" or new["status"] == "Unknown"
+
+
 def _parse_station(feature: dict, lat: float | None = None, lon: float | None = None) -> dict | None:
     props = feature.get("properties", {})
     geom = feature.get("geometry", {})
@@ -146,6 +156,7 @@ async def async_fetch_stations(hass: HomeAssistant, lat: float, lon: float, radi
         data = await resp.json(content_type=None)
 
     stations: dict[str, dict] = {}
+    key_by_evse: dict[str, str] = {}
     for feature in data.get("features", []):
         try:
             station = _parse_station(feature, lat, lon)
@@ -156,7 +167,15 @@ async def async_fetch_stations(hass: HomeAssistant, lat: float, lon: float, radi
             continue
         if station["distance_km"] > radius_km:
             continue
+        # Duplicates share the EvseID and often the feature id too.
+        evse_id = station.get("evse_id")
+        if evse_id in key_by_evse:
+            if _keeps_existing(stations[key_by_evse[evse_id]], station):
+                continue
+            del stations[key_by_evse[evse_id]]
         stations[station["id"]] = station
+        if evse_id:
+            key_by_evse[evse_id] = station["id"]
     return stations
 
 
@@ -180,10 +199,12 @@ async def async_fetch_station_by_id(hass: HomeAssistant, evse_id: str) -> dict |
     async with session.get(WFS_URL, params=params, timeout=30) as resp:
         resp.raise_for_status()
         data = await resp.json(content_type=None)
-    features = data.get("features", [])
-    if not features:
-        return None
-    return _parse_station(features[0])
+    best = None
+    for feature in data.get("features", []):
+        station = _parse_station(feature)
+        if station is not None and not _keeps_existing(best, station):
+            best = station
+    return best
 
 
 async def async_fetch_stations_by_evse_ids(hass: HomeAssistant, evse_ids: list[str]) -> dict[str, dict]:
@@ -210,6 +231,8 @@ async def async_fetch_stations_by_evse_ids(hass: HomeAssistant, evse_ids: list[s
         station = _parse_station(feature)
         if station is None or not station.get("evse_id"):
             continue
+        if _keeps_existing(stations.get(station["evse_id"]), station):
+            continue
         stations[station["evse_id"]] = station
     return stations
 
@@ -235,6 +258,8 @@ async def async_fetch_station_location(hass: HomeAssistant, charging_station_id:
     for feature in data.get("features", []):
         station = _parse_station(feature)
         if station is None or not station.get("evse_id"):
+            continue
+        if _keeps_existing(stations.get(station["evse_id"]), station):
             continue
         stations[station["evse_id"]] = station
     return stations
