@@ -456,7 +456,8 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
 
 class IchTankeStromOptionsFlow(OptionsFlow):
     """Configure dialog. Radius entries only: pick which plug types get a
-    dedicated available-count sensor. The live filters (min power, plug type,
+    dedicated available-count sensor, and set or change the optional
+    Chargeprice price layer. The live filters (min power, plug type,
     status, operator) intentionally stay on their number/select entities —
     they are meant to be flipped from a dashboard, not buried in a dialog."""
 
@@ -471,8 +472,17 @@ class IchTankeStromOptionsFlow(OptionsFlow):
                 data={
                     **self.config_entry.options,
                     CONF_PLUG_TYPE_SENSORS: user_input.get(CONF_PLUG_TYPE_SENSORS, []),
+                    CONF_CHARGEPRICE_API_KEY: (user_input.get(CONF_CHARGEPRICE_API_KEY) or "").strip(),
+                    CONF_CHARGEPRICE_CURRENCY: (
+                        user_input.get(CONF_CHARGEPRICE_CURRENCY) or DEFAULT_CHARGEPRICE_CURRENCY
+                    ).strip().upper(),
+                    CONF_PRICE_MATCH_RADIUS_M: user_input.get(CONF_PRICE_MATCH_RADIUS_M, DEFAULT_PRICE_MATCH_RADIUS_M),
                 }
             )
+
+        # Options win over the values entered at setup (see the coordinator).
+        def current(key: str, default):
+            return self.config_entry.options.get(key, self.config_entry.data.get(key, default))
 
         schema = vol.Schema(
             {
@@ -487,6 +497,15 @@ class IchTankeStromOptionsFlow(OptionsFlow):
                         sort=False,
                     )
                 ),
+                vol.Optional(CONF_CHARGEPRICE_API_KEY, default=current(CONF_CHARGEPRICE_API_KEY, "") or ""): str,
+                vol.Optional(
+                    CONF_CHARGEPRICE_CURRENCY,
+                    default=current(CONF_CHARGEPRICE_CURRENCY, DEFAULT_CHARGEPRICE_CURRENCY),
+                ): str,
+                vol.Optional(
+                    CONF_PRICE_MATCH_RADIUS_M,
+                    default=current(CONF_PRICE_MATCH_RADIUS_M, DEFAULT_PRICE_MATCH_RADIUS_M),
+                ): vol.All(vol.Coerce(int), vol.Range(min=50, max=500)),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)

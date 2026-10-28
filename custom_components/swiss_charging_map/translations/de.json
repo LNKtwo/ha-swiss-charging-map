@@ -69,10 +69,13 @@
   "options": {
     "step": {
       "init": {
-        "title": "Sensoren pro Steckertyp",
-        "description": "Jeder ausgewählte Steckertyp erhält einen eigenen Sensor, der die freien Ladepunkte dieses Typs in diesem Umkreis zählt. Diese Sensoren berücksichtigen die Filter Mindestleistung und Betreiber, ignorieren aber die Live-Filter Steckertyp und Status — sie behalten ihre Bedeutung, während die Karte gefiltert wird.",
+        "title": "Optionen",
+        "description": "Sensoren pro Steckertyp: Jeder ausgewählte Steckertyp erhält einen eigenen Sensor, der die freien Ladepunkte dieses Typs in diesem Umkreis zählt. Diese Sensoren berücksichtigen die Filter Mindestleistung und Betreiber, ignorieren aber die Live-Filter Steckertyp und Status.\n\nChargeprice (optional): Mit einem API-Schlüssel kommen strukturierte Preise für die meisten Netze dazu (kostenloser Demo-Key: insights.chargeprice.app/signup?demo=true). Ohne Schlüssel nutzt der Günstigster-Preis-Sensor die veröffentlichten Ad-hoc-Preise aus dem BFE-Ladepreisatlas.",
         "data": {
-          "plug_type_sensors": "Steckertypen mit eigenem Sensor"
+          "plug_type_sensors": "Steckertypen mit eigenem Sensor",
+          "chargeprice_api_key": "Chargeprice API-Schlüssel (optional, leer lassen zum Deaktivieren)",
+          "chargeprice_currency": "Chargeprice-Währung (Standard: CHF)",
+          "price_match_radius_m": "Preis-Abgleichsradius in Metern (Standard: 150)"
         }
       }
     },

@@ -345,6 +345,8 @@ def group_by_location(stations: dict[str, dict]) -> dict[str, dict]:
         # prices.py). Site-level by nature — every connector at a site
         # carries the same published price.
         g["price"] = next((c.get("price") for c in connectors.values() if c.get("price")), None)
+        kwh = [c["price_kwh"] for c in connectors.values() if c.get("price_kwh") is not None]
+        g["price_kwh"] = min(kwh) if kwh else None
         # Structured prices from the optional Chargeprice layer: aggregate
         # the site's connector prices (usually all identical per site).
         mins = [c["price_min"] for c in connectors.values() if c.get("price_min") is not None]

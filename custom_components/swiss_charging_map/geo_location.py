@@ -262,6 +262,8 @@ class ChargingSiteEvent(GeolocationEvent):
             # Published ad-hoc price ("0.57 CHF/kWh"), None for operators
             # that publish none — see prices.py.
             "price": location.get("price"),
+            # Energy component of that price as a number (CHF/kWh)
+            "price_kwh": location.get("price_kwh"),
             # Structured prices from the optional Chargeprice layer
             # (chargeprice.py) — CHF/kWh, None when the layer is off or the
             # operator publishes nothing there.

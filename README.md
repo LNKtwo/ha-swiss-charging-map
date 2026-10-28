@@ -6,8 +6,8 @@
 Live-Verfügbarkeit **und** Preise der öffentlichen Schweizer Ladeinfrastruktur in Home Assistant — auf einer Karte.
 
 - **Ladestationen:** ~19'000 öffentliche Ladepunkte der offiziellen Plattform [ich-tanke-strom.ch](https://www.ich-tanke-strom.ch) (BFE / EnergieSchweiz / swisstopo) — mit **Live-Status** (frei / belegt / ausser Betrieb), alle 5 Minuten aktualisiert.
-- **Ad-hoc-Preise inklusive:** Der Bundes-Ladepreisatlas (Swiss eMobility via data.geo.admin.ch) liefert für betreiberveröffentlichte Stationen den Ad-hoc-Preis („0.57 CHF/kWh") — **ohne Registrierung, ohne API-Key.**
-- **Optional: Chargeprice-Layer** — mit einem kostenlosen API-Key ergänzt die Integration strukturierte Min./Max.-Preise (CHF/kWh) für die grosse Mehrheit aller Schweizer Stationen (Swisscharge, MOVE/JOYA, GOFAST, Agrola, Migrol, IONITY u.v.m.) plus einen „Günstigster Ladepunkt im Umkreis"-Sensor.
+- **Ad-hoc-Preise inklusive:** Der Bundes-Ladepreisatlas (Swiss eMobility via data.geo.admin.ch) liefert für betreiberveröffentlichte Stationen den Ad-hoc-Preis („0.57 CHF/kWh") — **ohne Registrierung, ohne API-Key.** Daraus speist sich auch der „Günstigster Preis“-Sensor.
+- **Optional: Chargeprice-Layer** — mit einem kostenlosen API-Key ergänzt die Integration strukturierte Min./Max.-Preise (CHF/kWh) für die grosse Mehrheit aller Schweizer Stationen (Swisscharge, MOVE/JOYA, GOFAST, Agrola, Migrol, IONITY u.v.m.).
 
 ## Features
 
@@ -17,8 +17,9 @@ Live-Verfügbarkeit **und** Preise der öffentlichen Schweizer Ladeinfrastruktur
 | Live-Filter | Mindestleistung (kW), Steckertyp (CCS/Typ 2/CHAdeMO …), Status und Betreiber — als `number`/`select`-Entitäten, wirken sofort |
 | Verfügbarkeits-Sensor | Freie Stationen im Umkreis, gesamt + pro Steckertyp, Betreiber-Liste in den Attributen |
 | Favoriten | Einzelne Ladepunkte oder ganze Ladestandorte pinnbar — unabhängig von Radius/Standort, wiederholbar |
-| Preise (BFE-Atlas) | Ad-hoc-Preis pro Station, ohne Key (Abdeckung ~25 % der Standorte) |
-| Preise (Chargeprice, optional) | Strukturierte min/max CHF/kWh pro Station + „Günstigster Ladepunkt im Umkreis"-Sensor (Abdeckung deutlich höher; eigener kostenloser Demo-Key nötig) |
+| Preise (BFE-Atlas) | Ad-hoc-Preis pro Station, ohne Key (Abdeckung ~25 % der Standorte), als Text (`price`) und als Zahl (`price_kwh`, nur Energieanteil) |
+| Günstigster-Preis-Sensor | Tiefster Preis pro kWh im Umkreis — aus Chargeprice, sonst aus dem BFE-Atlas (dann ohne Zeit-/Sitzungsgebühren; die stehen im Attribut `price_text`). Quelle im Attribut `price_source` |
+| Preise (Chargeprice, optional) | Strukturierte min/max CHF/kWh pro Station (Abdeckung deutlich höher; eigener kostenloser Demo-Key nötig) |
 
 ## Installation
 
@@ -32,7 +33,7 @@ Live-Verfügbarkeit **und** Preise der öffentlichen Schweizer Ladeinfrastruktur
 
 1. **Einstellungen → Geräte & Dienste → Integration hinzufügen → „Swiss Charging Map"**
 2. Modus **Radius-Übersicht** wählen; Breite/Länge (Default: Home-Standort) und Radius (max. 30 km) setzen
-3. **Optional — Preis-Layer:** Chargeprice-API-Key eintragen (kostenloser Demo-Key, nicht-kommerziell: [insights.chargeprice.app/signup?demo=true](https://insights.chargeprice.app/signup?demo=true)). Währung (Standard CHF) und Preis-Abgleichsradius (Standard 150 m) passen in der Regel.
+3. **Optional — Preis-Layer:** Chargeprice-API-Key eintragen (kostenloser Demo-Key, nicht-kommerziell: [insights.chargeprice.app/signup?demo=true](https://insights.chargeprice.app/signup?demo=true)). Währung (Standard CHF) und Preis-Abgleichsradius (Standard 150 m) passen in der Regel. Alles drei lässt sich auch später über **Konfigurieren** setzen oder ändern.
 4. Filter (Mindest-kW, Steckertyp, Status, Betreiber) danach live über die `number`/`select`-Entitäten stellen — ohne Neustart.
 5. Favoriten: Integration erneut hinzufügen → „Favorit" — per EvseID oder Umgebungssuche.
 
@@ -46,7 +47,7 @@ geo_location_sources:
     attribute: price_min
 ```
 
-Marker-Attribute (pro Station): `price` (BFE-Ad-hoc-Preis), `price_min`/`price_max`/`price_provider` (Chargeprice-Layer), `count_available`/`count_total`, `max_power_kw`, `plug_types`, `operator`, `street`, `city`, `status`.
+Marker-Attribute (pro Station): `price` (BFE-Ad-hoc-Preis), `price_kwh` (dessen Energieanteil als Zahl), `price_min`/`price_max`/`price_provider` (Chargeprice-Layer), `count_available`/`count_total`, `max_power_kw`, `plug_types`, `operator`, `street`, `city`, `status`.
 
 Marker **nicht** über Entity-IDs ansprechen (die Namen sind lokalisiert) — immer `geo_location_sources` mit `source: swiss_charging_map` nutzen oder nach `source`-Attribut filtern.
 

@@ -66,10 +66,13 @@
   "options": {
     "step": {
       "init": {
-        "title": "Sensori per tipo di connettore",
-        "description": "Ogni tipo di connettore selezionato riceve un proprio sensore che conta i punti di ricarica disponibili di quel tipo in questo raggio. Questi sensori rispettano i filtri potenza minima e gestore, ma ignorano i filtri live tipo di connettore e stato — mantengono il loro significato mentre la mappa viene filtrata.",
+        "title": "Opzioni",
+        "description": "Sensori per tipo di connettore: ogni tipo selezionato ottiene un proprio sensore che conta i punti di ricarica liberi di quel tipo in questo raggio. Questi sensori rispettano i filtri potenza minima e gestore, ma ignorano i filtri in tempo reale tipo di connettore e stato.\n\nChargeprice (facoltativo): una chiave API aggiunge prezzi strutturati per la maggior parte delle reti (chiave demo gratuita: insights.chargeprice.app/signup?demo=true). Senza chiave, il sensore del prezzo più basso usa i prezzi ad hoc pubblicati nell'atlante dei prezzi dell'UFE.",
         "data": {
-          "plug_type_sensors": "Tipi di connettore con sensore dedicato"
+          "plug_type_sensors": "Tipi di connettore con sensore dedicato",
+          "chargeprice_api_key": "Chiave API Chargeprice (facoltativa, lasciare vuoto per disattivare)",
+          "chargeprice_currency": "Valuta Chargeprice (predefinita: CHF)",
+          "price_match_radius_m": "Raggio di abbinamento prezzi in metri (predefinito: 150)"
         }
       }
     },

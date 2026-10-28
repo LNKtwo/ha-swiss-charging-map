@@ -218,11 +218,12 @@ async def async_setup_entry(
 
 
 class ChargingStationsCheapestSensor(CoordinatorEntity[IchTankeStromCoordinator], SensorEntity):
-    """Lowest known CHF/kWh among this radius' sites. Fills from the optional
-    Chargeprice layer (chargeprice.py); without an API key it reports
-    "unknown" (state None). The BFE ad-hoc atlas value (prices.py) is a
-    display string, not numerically comparable, so it is deliberately not
-    mixed in here — see the README."""
+    """Lowest known price per kWh among this radius' sites. Uses the optional
+    Chargeprice layer (chargeprice.py) where it has a price, otherwise the
+    energy component of the BFE ad-hoc atlas price (prices.py) — the latter
+    needs no API key but excludes time or session fees, which stay visible
+    in the `price_text` attribute. Atlas prices are always CHF, so they are
+    only used while the configured currency is CHF."""
 
     _attr_has_entity_name = False
     _attr_attribution = ATTRIBUTION
@@ -232,49 +233,65 @@ class ChargingStationsCheapestSensor(CoordinatorEntity[IchTankeStromCoordinator]
     def __init__(self, hass: HomeAssistant, coordinator: IchTankeStromCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
         self._entry = entry
-        currency = entry.options.get(
-            CONF_CHARGEPRICE_CURRENCY, entry.data.get(CONF_CHARGEPRICE_CURRENCY, DEFAULT_CHARGEPRICE_CURRENCY)
-        )
-        self._attr_native_unit_of_measurement = f"{currency}/kWh"
         self._attr_name = t("cheapest_charger_name", hass)
         self._attr_unique_id = f"{entry.entry_id}_cheapest"
         self._attr_device_info = device_info(hass, entry)
         radius = entry.data.get(CONF_RADIUS_KM)
         self.entity_id = f"sensor.charging_stations_cheapest_{round(radius)}km_{entry_suffix(entry)}"
 
-    def _cheapest(self) -> dict | None:
+    def _currency(self) -> str:
+        return self._entry.options.get(
+            CONF_CHARGEPRICE_CURRENCY, self._entry.data.get(CONF_CHARGEPRICE_CURRENCY, DEFAULT_CHARGEPRICE_CURRENCY)
+        )
+
+    def _site_price(self, location: dict) -> tuple[float, str] | None:
+        if location.get("price_min") is not None:
+            return location["price_min"], "chargeprice"
+        if location.get("price_kwh") is not None and self._currency().upper() == "CHF":
+            return location["price_kwh"], "bfe"
+        return None
+
+    def _cheapest(self) -> tuple[dict, float, str] | None:
         best = None
         for location in (self.coordinator.data or {}).get("filtered_locations", {}).values():
-            val = location.get("price_min")
-            if val is None:
-                continue
-            if best is None or val < best.get("price_min"):
-                best = location
+            price = self._site_price(location)
+            if price is not None and (best is None or price[0] < best[1]):
+                best = (location, *price)
         return best
 
     @property
     def native_value(self) -> float | None:
         best = self._cheapest()
-        return round(best["price_min"], 3) if best else None
+        return round(best[1], 3) if best else None
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        return f"{self._currency()}/kWh"
 
     @property
     def extra_state_attributes(self):
         best = self._cheapest()
         if best is None:
-            return {"price_layer": "off or no priced stations in radius"}
+            return {"price_source": None}
+        location, _, source = best
         return {
-            "price_layer": "chargeprice",
-            "station": best.get("station_name") or best.get("street"),
-            "city": best.get("city"),
-            "operator": best.get("operator"),
-            "distance_km": best.get("distance_km"),
+            # "chargeprice" or "bfe" (ad-hoc atlas, energy component only)
+            "price_source": source,
+            "station": location.get("station_name") or location.get("street"),
+            "street": location.get("street"),
+            "city": location.get("city"),
+            "operator": location.get("operator"),
+            "distance_km": location.get("distance_km"),
             "max_power_kw": max(
-                ((c.get("power_kw") or 0) for c in best.get("connectors", {}).values()), default=0
+                ((c.get("power_kw") or 0) for c in location.get("connectors", {}).values()), default=0
             ),
-            "price_min": best.get("price_min"),
-            "price_max": best.get("price_max"),
-            "price_provider": best.get("price_provider"),
-            "ad_hoc_price_bfe": best.get("price"),
+            "latitude": location.get("latitude"),
+            "longitude": location.get("longitude"),
+            "price_min": location.get("price_min"),
+            "price_max": location.get("price_max"),
+            "price_provider": location.get("price_provider"),
+            # Full published atlas text, including any time/session fees
+            "price_text": location.get("price"),
         }
 
 

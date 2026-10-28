@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.2 (2026-10-28)
+
+- **New:** the "cheapest price" sensor works without an API key — it falls
+  back to the energy component of the BFE ad-hoc atlas price (e.g. 0.49 from
+  "0.49 CHF/kWh + 0.25 CHF/Min (> 1h)"). Attributes `price_source`
+  (`chargeprice` / `bfe`) and `price_text` (full published price) show where
+  the value comes from and any time or session fees it excludes.
+- **New:** map markers expose `price_kwh`, the atlas price as a number.
+- **New:** the Chargeprice API key, currency and match radius can be set or
+  changed in the integration's Configure dialog — no need to re-add the entry.
+
 ## 1.0.1 (2026-10-28)
 
 - **Fix:** Chargeprice prices are now kept per search area — with several
