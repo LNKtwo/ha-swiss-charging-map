@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.3 (2026-10-28)
+
+- **Fix:** charge points published twice by different data feeds (same
+  EvseID, e.g. Mall of Switzerland via MOVE and Energie 360°) are no longer
+  shown twice, and the copy with live status wins over the one reporting
+  "Unknown". Affected the map counts, single and site favorites, and site
+  resolution during setup.
+
 ## 1.0.2 (2026-10-28)
 
 - **New:** the "cheapest price" sensor works without an API key — it falls
