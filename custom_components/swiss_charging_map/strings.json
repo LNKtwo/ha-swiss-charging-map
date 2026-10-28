@@ -69,10 +69,13 @@
   "options": {
     "step": {
       "init": {
-        "title": "Per-plug-type sensors",
-        "description": "Each selected plug type gets its own sensor counting the available charge points of that type within this radius. These sensors respect the minimum-power and operator filters but ignore the live plug-type and status filters, so they keep their meaning while the map is being filtered.",
+        "title": "Options",
+        "description": "Plug type sensors: each selected plug type gets its own sensor counting the available charge points of that type in this radius. These respect the minimum-power and operator filters but ignore the live plug-type and status filters.\n\nChargeprice (optional): an API key adds structured prices for most networks (free demo key: insights.chargeprice.app/signup?demo=true). Without a key, the cheapest-price sensor uses the published ad-hoc prices from the BFE price atlas.",
         "data": {
-          "plug_type_sensors": "Plug types with a dedicated sensor"
+          "plug_type_sensors": "Plug types with a dedicated sensor",
+          "chargeprice_api_key": "Chargeprice API key (optional, leave empty to disable)",
+          "chargeprice_currency": "Chargeprice currency (default: CHF)",
+          "price_match_radius_m": "Price match radius in meters (default: 150)"
         }
       }
     },

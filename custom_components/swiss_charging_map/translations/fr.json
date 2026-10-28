@@ -66,10 +66,13 @@
   "options": {
     "step": {
       "init": {
-        "title": "Capteurs par type de connecteur",
-        "description": "Chaque type de connecteur sélectionné reçoit son propre capteur comptant les points de charge disponibles de ce type dans ce rayon. Ces capteurs respectent les filtres puissance minimale et exploitant, mais ignorent les filtres en direct type de connecteur et statut — ils gardent leur signification pendant que la carte est filtrée.",
+        "title": "Options",
+        "description": "Capteurs par type de prise : chaque type sélectionné obtient son propre capteur qui compte les points de recharge disponibles de ce type dans ce rayon. Ces capteurs respectent les filtres puissance minimale et exploitant, mais ignorent les filtres en direct type de prise et statut.\n\nChargeprice (facultatif) : une clé API ajoute des prix structurés pour la plupart des réseaux (clé démo gratuite : insights.chargeprice.app/signup?demo=true). Sans clé, le capteur du prix le plus bas utilise les prix ad hoc publiés dans l'atlas des prix de l'OFEN.",
         "data": {
-          "plug_type_sensors": "Types de connecteur avec capteur dédié"
+          "plug_type_sensors": "Types de connecteur avec capteur dédié",
+          "chargeprice_api_key": "Clé API Chargeprice (facultatif, laisser vide pour désactiver)",
+          "chargeprice_currency": "Devise Chargeprice (par défaut : CHF)",
+          "price_match_radius_m": "Rayon d'association des prix en mètres (par défaut : 150)"
         }
       }
     },

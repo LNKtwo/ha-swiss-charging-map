@@ -55,6 +55,18 @@ _PRICE_ROW = re.compile(
 # source uses, so it doubles as the join key between the two sources.
 _STATION_IDS = re.compile(r"stationids=([^\"&]+)")
 
+# The energy component of a published price. Observed formats (2026-10-28,
+# ~2,500 priced sites): "0.57 CHF/kWh", optionally followed by
+# "+ 0.25 CHF/Min (> 1h)", "+ 0.1 CHF/Min" or "+ 1.5 CHF/charge".
+_KWH_PRICE = re.compile(r"(\d+(?:[.,]\d+)?)\s*CHF\s*/\s*kWh", re.I)
+
+
+def parse_kwh_price(text: str | None) -> float | None:
+    """CHF/kWh as a number from a published price text, or None if the text
+    has no energy component. Time or session fees are not included."""
+    match = _KWH_PRICE.search(text or "")
+    return float(match.group(1).replace(",", ".")) if match else None
+
 
 def _parse_prices(data: dict) -> tuple[dict[str, str], dict[str, str]]:
     """Extract price text per site from the GeoJSON's popup HTML. Returns
@@ -133,6 +145,8 @@ def get_price_cache(hass: HomeAssistant) -> PriceCache:
 
 
 def annotate_prices(cache: PriceCache, stations: dict[str, dict]) -> None:
-    """Attach a `price` key to every station dict (None when unknown)."""
+    """Attach `price` (text) and `price_kwh` (CHF/kWh) to every station dict,
+    both None when unknown."""
     for station in stations.values():
         station["price"] = cache.lookup(station.get("evse_id"), station.get("charging_station_id"))
+        station["price_kwh"] = parse_kwh_price(station["price"])
