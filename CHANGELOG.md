@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+- **Fix:** Chargeprice prices are now kept per search area — with several
+  radius entries, only the first entry's area used to get prices.
+- **Fix:** a tariff without any price no longer aborts the whole Chargeprice
+  refresh (`ValueError` in the tariff summary).
+- **Fix:** a single HTTP 429 no longer disables the Chargeprice layer until
+  Home Assistant restarts; it now retries in the next batch window.
+- **Fix:** Chargeprice coverage grows over time — each hourly batch prices the
+  nearest stations that are still unpriced or stale, instead of re-pricing
+  the same first 30 stations forever.
+- **Fix:** Chargeprice requests now use a timeout, so a hanging API can no
+  longer stall the availability refresh.
+- **Fix:** the distance fallback for joining Chargeprice prices was never
+  used; it now matches stations within the configured match radius.
+- **Fix:** "Cheapest price" sensor attributes `station`, `distance_km` and
+  `max_power_kw` were always empty; its unit follows the configured currency.
+
 ## 1.0.0 (2026-10-27)
 
 Initial release.

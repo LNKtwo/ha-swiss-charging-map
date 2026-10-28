@@ -14,6 +14,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
 from .const import (
+    CONF_CHARGEPRICE_CURRENCY,
     CONF_ENTRY_TYPE,
     CONF_FAVORITE_NAME,
     CONF_MIN_POWER_KW,
@@ -24,6 +25,7 @@ from .const import (
     CONF_STATION_ID,
     CONF_STATION_LOCATION_ID,
     CONF_STATUS,
+    DEFAULT_CHARGEPRICE_CURRENCY,
     DEFAULT_MIN_POWER_KW,
     DOMAIN,
     ENTRY_TYPE_FAVORITE,
@@ -230,6 +232,10 @@ class ChargingStationsCheapestSensor(CoordinatorEntity[IchTankeStromCoordinator]
     def __init__(self, hass: HomeAssistant, coordinator: IchTankeStromCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
         self._entry = entry
+        currency = entry.options.get(
+            CONF_CHARGEPRICE_CURRENCY, entry.data.get(CONF_CHARGEPRICE_CURRENCY, DEFAULT_CHARGEPRICE_CURRENCY)
+        )
+        self._attr_native_unit_of_measurement = f"{currency}/kWh"
         self._attr_name = t("cheapest_charger_name", hass)
         self._attr_unique_id = f"{entry.entry_id}_cheapest"
         self._attr_device_info = device_info(hass, entry)
@@ -252,21 +258,19 @@ class ChargingStationsCheapestSensor(CoordinatorEntity[IchTankeStromCoordinator]
         return round(best["price_min"], 3) if best else None
 
     @property
-    def native_unit_of_measurement(self) -> str:
-        return "CHF/kWh"
-
-    @property
     def extra_state_attributes(self):
         best = self._cheapest()
         if best is None:
             return {"price_layer": "off or no priced stations in radius"}
         return {
             "price_layer": "chargeprice",
-            "station": best.get("name") or best.get("street"),
+            "station": best.get("station_name") or best.get("street"),
             "city": best.get("city"),
             "operator": best.get("operator"),
-            "distance_km": best.get("distance"),
-            "max_power_kw": best.get("max_power_kw"),
+            "distance_km": best.get("distance_km"),
+            "max_power_kw": max(
+                ((c.get("power_kw") or 0) for c in best.get("connectors", {}).values()), default=0
+            ),
             "price_min": best.get("price_min"),
             "price_max": best.get("price_max"),
             "price_provider": best.get("price_provider"),

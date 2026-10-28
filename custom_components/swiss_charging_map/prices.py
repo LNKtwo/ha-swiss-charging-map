@@ -27,7 +27,7 @@ from datetime import datetime, timedelta
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import DOMAIN
+from .const import DOMAIN, PRICE_MAX_AGE_HOURS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,7 +40,6 @@ PRICE_DATA_URL = (
     "ch.bfe.ladestellen-elektromobilitaet_de.json"
 )
 PRICE_FETCH_TIMEOUT_SECONDS = 60
-PRICE_MAX_AGE_HOURS = 6
 
 _DATA_KEY = f"{DOMAIN}_price_cache"
 

@@ -47,13 +47,15 @@ DEFAULT_CHARGEPRICE_CURRENCY = "CHF"
 DEFAULT_PRICE_MATCH_RADIUS_M = 150
 CHARGEPRICE_API_URL = "https://api.chargeprice.app/v1"
 CHARGEPRICE_TIMEOUT_SECONDS = 30
-# Demo keys are rate-limited hard: at most this many priced stations per
-# refresh cycle, results cached PRICE_MAX_AGE_HOURS across all entries.
+# Demo keys are rate-limited hard: at most this many stations are priced per
+# batch, at most one batch per search area every
+# CHARGEPRICE_BATCH_INTERVAL_MINUTES; results are cached PRICE_MAX_AGE_HOURS.
 CHARGEPRICE_MAX_STATIONS_PER_CYCLE = 30
+CHARGEPRICE_BATCH_INTERVAL_MINUTES = 60
 CHARGEPRICE_SESSION_ENERGY_KWH = 30.0
 CHARGEPRICE_SESSION_MINUTES = 30.0
 CHARGEPRICE_SESSION_START_MINUTES = 720
-# Shared with prices.py's cache policy (defined there too; kept in sync).
+# Cache lifetime of both price layers (prices.py and chargeprice.py).
 PRICE_MAX_AGE_HOURS = 6
 
 # Which kind of config entry this is. Radius entries (the original/default
