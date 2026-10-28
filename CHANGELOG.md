@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.1 (2026-10-28)
 
 - **Fix:** Chargeprice prices are now kept per search area — with several
   radius entries, only the first entry's area used to get prices.
