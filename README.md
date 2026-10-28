@@ -55,11 +55,11 @@ Marker **nicht** über Entity-IDs ansprechen (die Namen sind lokalisiert) — im
 | Quelle | Key nötig | Abdeckung | Beschreibung |
 |---|---|---|---|
 | BFE-Ladepreisatlas (via data.geo.admin.ch) | Nein | ~25 % der Standorte | Ad-hoc-Preis als Text, immer ohne Abo (walk-up) |
-| Chargeprice-API (optional) | Ja (kostenloser Demo-Key) | Grossmehrteil der Schweizer Netze | Strukturiert min/max CHF/kWh; Direct-Payment-Tarife bevorzugt; Demo-Limit: max. 30 Stationen pro Aktualisierungszyklus, 6 h Cache |
+| Chargeprice-API (optional) | Ja (kostenloser Demo-Key) | Grossmehrteil der Schweizer Netze | Strukturiert min/max CHF/kWh; Direct-Payment-Tarife bevorzugt; Demo-Limit: max. 30 Stationen pro Stunde und Suchgebiet, 6 h Cache |
 
 Beide Quellen ergänzen sich: der Ad-hoc-Atlas ist keyless, Chargeprice liefert Breite + Struktur. Ohne Key verhält sich die Integration identisch zum Upstream.
 
-**Demo-Key-Hinweis:** Der Chargeprice-Demo-Zugang ist für nicht-kommerzielle Nutzung bestimmt und stark ratenlimitiert — deshalb preist die Integration pro Zyklus maximal die 30 nächstgelegenen Stationen und cached 6 Stunden.
+**Demo-Key-Hinweis:** Der Chargeprice-Demo-Zugang ist für nicht-kommerzielle Nutzung bestimmt und stark ratenlimitiert — deshalb preist die Integration pro Stunde und Suchgebiet maximal 30 Stationen (die nächstgelegenen noch ungepreisten zuerst, die Abdeckung wächst also schrittweise) und cached die Preise 6 Stunden.
 
 ## Credits
 

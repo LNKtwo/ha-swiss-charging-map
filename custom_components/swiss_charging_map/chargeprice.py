@@ -22,9 +22,11 @@ subscription tariffs, with the cheapest direct-payment tariff as the
 headline "min" price.
 
 Quota care: demo keys are heavily rate-limited, so at most
-CHARGEPRICE_MAX_STATIONS_PER_CYCLE stations are priced per refresh, results
-are cached for PRICE_MAX_AGE_HOURS across every config entry, and a 429
-ends the cycle immediately instead of burning through the remaining quota.
+CHARGEPRICE_MAX_STATIONS_PER_CYCLE stations (nearest first, unpriced or stale
+ones only) are priced per batch, at most one batch per area every
+CHARGEPRICE_BATCH_INTERVAL_MINUTES. Prices are cached for PRICE_MAX_AGE_HOURS
+per search area, and a 429 ends the batch immediately instead of burning
+through the remaining quota.
 """
 from __future__ import annotations
 
@@ -33,19 +35,18 @@ import logging
 import math
 from datetime import datetime, timedelta
 
+from aiohttp import ClientResponseError, ClientTimeout
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CHARGEPRICE_API_URL,
+    CHARGEPRICE_BATCH_INTERVAL_MINUTES,
     CHARGEPRICE_MAX_STATIONS_PER_CYCLE,
     CHARGEPRICE_SESSION_ENERGY_KWH,
     CHARGEPRICE_SESSION_MINUTES,
     CHARGEPRICE_SESSION_START_MINUTES,
     CHARGEPRICE_TIMEOUT_SECONDS,
-    CONF_CHARGEPRICE_API_KEY,
-    CONF_CHARGEPRICE_CURRENCY,
-    CONF_PRICE_MATCH_RADIUS_M,
     DEFAULT_CHARGEPRICE_CURRENCY,
     DEFAULT_PRICE_MATCH_RADIUS_M,
     DOMAIN,
@@ -97,6 +98,7 @@ class ChargepriceClient:
     def __init__(self, session, api_key: str, currency: str) -> None:
         self._session = session
         self._currency = currency
+        self._timeout = ClientTimeout(total=CHARGEPRICE_TIMEOUT_SECONDS)
         self._headers = {"API-Key": api_key, "Content-Type": "application/json", "Accept-Language": "en"}
 
     async def stations_in_radius(self, lat: float, lon: float, radius_m: float) -> list[dict]:
@@ -110,7 +112,9 @@ class ChargepriceClient:
             "page[size]": 400,
             "page[number]": 1,
         }
-        async with self._session.get(f"{CHARGEPRICE_API_URL}/charging_stations", params=params, headers=self._headers) as resp:
+        async with self._session.get(
+            f"{CHARGEPRICE_API_URL}/charging_stations", params=params, headers=self._headers, timeout=self._timeout
+        ) as resp:
             resp.raise_for_status()
             body = await resp.json(content_type=None)
         stations: list[dict] = []
@@ -161,23 +165,35 @@ class ChargepriceClient:
                 },
             }
         }
-        async with self._session.post(f"{CHARGEPRICE_API_URL}/charge_prices", json=body, headers=self._headers) as resp:
+        async with self._session.post(
+            f"{CHARGEPRICE_API_URL}/charge_prices", json=body, headers=self._headers, timeout=self._timeout
+        ) as resp:
             resp.raise_for_status()
             body = await resp.json(content_type=None)
-        return (body.get("data") or []) and [d.get("attributes") or {} for d in body["data"]] or []
+        return [d.get("attributes") or {} for d in body.get("data") or []]
+
+
+class _AreaPrices:
+    """Price state for one search area (one radius entry's center + radius)."""
+
+    def __init__(self) -> None:
+        self.cp_stations: list[dict] = []
+        self.listed_at: datetime | None = None
+        # cp station id -> (price summary or None if unpriced, priced_at)
+        self.priced: dict[str, tuple[dict | None, datetime]] = {}
+        self.by_evse: dict[str, dict] = {}
+        self.next_batch_at: datetime | None = None
 
 
 class ChargepricePriceCache:
     """One instance per HA instance, shared by every config entry — same
-    pattern as prices.PriceCache. Holds one entry per EVSE ID:
-    {min, max, currency, provider, tariff, direct_payment}."""
+    pattern as prices.PriceCache. Prices are kept per search area, since
+    every radius entry has its own center: a single shared result set would
+    only ever cover the first entry's area."""
 
     def __init__(self) -> None:
-        self._by_evse: dict[str, dict] = {}
-        self._by_station: dict[str, dict] = {}
-        self._fetched_at: datetime | None = None
+        self._areas: dict[tuple, _AreaPrices] = {}
         self._lock = asyncio.Lock()
-        self._quota_hit = False
 
     async def async_annotate(
         self,
@@ -194,110 +210,118 @@ class ChargepricePriceCache:
         price_tariff. Never raises; without an API key this is a no-op."""
         if not api_key:
             return
+        currency = currency or DEFAULT_CHARGEPRICE_CURRENCY
+        match_radius_m = match_radius_m or DEFAULT_PRICE_MATCH_RADIUS_M
+        key = (round(latitude, 4), round(longitude, 4), float(radius_km), currency)
         try:
-            await self.async_ensure_fresh(
-                hass, latitude, longitude, radius_km, api_key, currency or DEFAULT_CHARGEPRICE_CURRENCY, match_radius_m or DEFAULT_PRICE_MATCH_RADIUS_M
-            )
+            area = await self.async_ensure_fresh(hass, key, latitude, longitude, radius_km, api_key, currency)
         except Exception:  # noqa: BLE001 - price lookup is an optional extra
             _LOGGER.warning("Chargeprice price lookup failed; prices unavailable", exc_info=True)
             return
         for station in stations.values():
-            data = self.lookup(station.get("evse_id"), station.get("charging_station_id"))
+            data = self.lookup(
+                area, station.get("evse_id"), station.get("latitude"), station.get("longitude"), match_radius_m
+            )
             if data is None:
                 continue
             station["price_min"] = data.get("min")
             station["price_max"] = data.get("max")
+            station["price_currency"] = data.get("currency")
             station["price_provider"] = data.get("provider")
             station["price_tariff"] = data.get("tariff")
 
     async def async_ensure_fresh(
-        self, hass: HomeAssistant, lat: float, lon: float, radius_km: float, api_key: str, currency: str, match_radius_m: float
-    ) -> None:
+        self, hass: HomeAssistant, key: tuple, lat: float, lon: float, radius_km: float, api_key: str, currency: str
+    ) -> _AreaPrices:
         async with self._lock:
-            if self._fetched_at and datetime.now() - self._fetched_at < timedelta(hours=PRICE_MAX_AGE_HOURS):
-                return
-            if self._quota_hit:
-                # Quota exhausted this window: don't hammer the API until it
-                # resets (the reset is far longer than PRICE_MAX_AGE_HOURS).
-                self._fetched_at = datetime.now()
-                return
+            area = self._areas.setdefault(key, _AreaPrices())
+            now = datetime.now()
+            if area.next_batch_at and now < area.next_batch_at:
+                return area
+            area.next_batch_at = now + timedelta(minutes=CHARGEPRICE_BATCH_INTERVAL_MINUTES)
             try:
-                await self._refresh(hass, lat, lon, radius_km, api_key, currency, match_radius_m)
-            except Exception as err:  # noqa: BLE001
-                self._fetched_at = datetime.now()
-                if "429" in str(err) or "RESOURCE_EXHAUSTED" in str(err):
-                    self._quota_hit = True
-                    _LOGGER.warning("Chargeprice quota exhausted; price layer paused until next refresh window")
+                await self._refresh(hass, area, lat, lon, radius_km, api_key, currency)
+            except ClientResponseError as err:
+                if err.status == 429:
+                    # Quota exhausted: skip until the next batch window
+                    # instead of burning more requests now.
+                    _LOGGER.warning("Chargeprice quota exhausted; retrying in %d min", CHARGEPRICE_BATCH_INTERVAL_MINUTES)
                 else:
                     _LOGGER.warning("Fetching Chargeprice data failed; prices unavailable: %s", err)
-                return
-            self._fetched_at = datetime.now()
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.warning("Fetching Chargeprice data failed; prices unavailable: %s", err)
+            return area
 
-    async def _refresh(self, hass: HomeAssistant, lat: float, lon: float, radius_km: float, api_key: str, currency: str, match_radius_m: float) -> None:
+    async def _refresh(
+        self, hass: HomeAssistant, area: _AreaPrices, lat: float, lon: float, radius_km: float, api_key: str, currency: str
+    ) -> None:
         session = async_get_clientsession(hass)
         client = ChargepriceClient(session, api_key, currency)
-        cp_stations = await client.stations_in_radius(lat, lon, radius_km * 1000)
-        if not cp_stations:
-            _LOGGER.debug("Chargeprice: no stations in radius")
-            return
+        now = datetime.now()
+        max_age = timedelta(hours=PRICE_MAX_AGE_HOURS)
 
-        # Index Chargeprice stations by normalized EVSE ID for the direct join.
-        by_evse: dict[str, dict] = {}
-        for cp in cp_stations:
-            for evse_id in cp["evse_ids"]:
-                by_evse[str(evse_id).strip().upper()] = cp
+        if area.listed_at is None or now - area.listed_at >= max_age:
+            area.cp_stations = await client.stations_in_radius(lat, lon, radius_km * 1000)
+            area.listed_at = now
+            known_ids = {cp["id"] for cp in area.cp_stations}
+            area.priced = {k: v for k, v in area.priced.items() if k in known_ids}
 
-        # ich-tanke-strom stations in the same area (dedup by operator+coords
-        # happens later — one price request per unique Chargeprice station).
-        priced: dict[str, dict] = {}  # cp station id -> price summary
-        requests_made = 0
-        for station in cp_stations:
-            if requests_made >= CHARGEPRICE_MAX_STATIONS_PER_CYCLE:
-                _LOGGER.debug("Chargeprice: cycle cap reached (%d stations)", len(priced))
-                break
-            if not station["operator_id"] or not station["latitude"] or not station["longitude"]:
-                continue
-            prices = await client.charge_price(station["latitude"], station["longitude"], station["operator_id"], station["charge_points"])
-            requests_made += 1
-            summary = _summarize_prices(prices, CHARGEPRICE_SESSION_ENERGY_KWH)
-            if summary is not None:
-                priced[station["id"]] = summary
+        # Price the nearest stations that are unpriced or stale, at most
+        # CHARGEPRICE_MAX_STATIONS_PER_CYCLE per batch — later batches pick
+        # up where this one stopped, so coverage grows over time.
+        candidates = [
+            cp
+            for cp in area.cp_stations
+            if cp["operator_id"]
+            and cp["latitude"] is not None
+            and cp["longitude"] is not None
+            and (cp["id"] not in area.priced or now - area.priced[cp["id"]][1] >= max_age)
+        ]
+        candidates.sort(key=lambda cp: _haversine_m(lat, lon, cp["latitude"], cp["longitude"]))
+        try:
+            for cp in candidates[:CHARGEPRICE_MAX_STATIONS_PER_CYCLE]:
+                prices = await client.charge_price(cp["latitude"], cp["longitude"], cp["operator_id"], cp["charge_points"])
+                area.priced[cp["id"]] = (_summarize_prices(prices, CHARGEPRICE_SESSION_ENERGY_KWH), now)
+        finally:
+            # Keep whatever got priced before an error (e.g. a 429 mid-batch).
+            area.by_evse = {}
+            for cp in area.cp_stations:
+                summary = area.priced.get(cp["id"], (None, now))[0]
+                if summary is None:
+                    continue
+                for evse_id in cp["evse_ids"]:
+                    area.by_evse[str(evse_id).strip().upper()] = summary
+        _LOGGER.debug(
+            "Chargeprice refreshed: %d of %d stations in radius priced",
+            sum(1 for summary, _ in area.priced.values() if summary is not None),
+            len(area.cp_stations),
+        )
 
-        # Join back: EVSE IDs first, distance fallback for the rest.
-        by_evse_out: dict[str, dict] = {}
-        by_station_out: dict[str, dict] = {}
-        for cp in cp_stations:
-            summary = priced.get(cp["id"])
-            if summary is None:
-                continue
-            for evse_id in cp["evse_ids"]:
-                by_evse_out[str(evse_id).strip().upper()] = summary
-            by_station_out[cp["id"]] = summary
-        self._fallback = (cp_stations, priced, lat, lon, match_radius_m)
-
-        self._by_evse = by_evse_out
-        self._by_station = by_station_out
-        _LOGGER.debug("Chargeprice refreshed: %d stations priced of %d in radius", len(priced), len(cp_stations))
-
-    def lookup(self, evse_id: str | None, charging_station_id: str | None = None, latitude: float | None = None, longitude: float | None = None) -> dict | None:
+    @staticmethod
+    def lookup(
+        area: _AreaPrices,
+        evse_id: str | None,
+        latitude: float | None,
+        longitude: float | None,
+        match_radius_m: float,
+    ) -> dict | None:
         """Price summary for one connector. EVSE-ID join first; then the
-        distance fallback against the last refresh's station set."""
+        nearest priced Chargeprice station within match_radius_m."""
         if evse_id:
-            data = self._by_evse.get(str(evse_id).strip().upper())
+            data = area.by_evse.get(str(evse_id).strip().upper())
             if data is not None:
                 return data
-        fallback = getattr(self, "_fallback", None)
-        if fallback and latitude is not None and longitude is not None:
-            cp_stations, priced, cache_lat, cache_lon, match_radius_m = fallback
-            best, best_d = None, match_radius_m
-            for cp in cp_stations:
-                if cp["id"] not in priced or cp["latitude"] is None or cp["longitude"] is None:
-                    continue
-                d = _haversine_m(latitude, longitude, cp["latitude"], cp["longitude"])
-                if d < best_d:
-                    best, best_d = priced[cp["id"]], d
-            return best
-        return None
+        if latitude is None or longitude is None:
+            return None
+        best, best_d = None, match_radius_m
+        for cp in area.cp_stations:
+            summary = area.priced.get(cp["id"], (None, None))[0]
+            if summary is None or cp["latitude"] is None or cp["longitude"] is None:
+                continue
+            d = _haversine_m(latitude, longitude, cp["latitude"], cp["longitude"])
+            if d < best_d:
+                best, best_d = summary, d
+        return best
 
 
 def _summarize_prices(charge_prices: list[dict], energy_kwh: float) -> dict | None:
@@ -320,10 +344,15 @@ def _summarize_prices(charge_prices: list[dict], energy_kwh: float) -> dict | No
     kwh = _kwh_prices(pool)
     if not kwh:
         return None
-    best = min(pool, key=lambda t: (
-        min((cp.get("price") or 0) / energy_kwh for cp in (t.get("charge_point_prices") or []) if cp.get("price") is not None) or 0,
-        not t.get("direct_payment"),
-    ))
+    def _tariff_min(tariff: dict) -> float:
+        prices = [
+            float(cp["price"]) / energy_kwh
+            for cp in tariff.get("charge_point_prices") or []
+            if cp.get("price") is not None
+        ]
+        return min(prices, default=math.inf)
+
+    best = min(pool, key=lambda t: (_tariff_min(t), not t.get("direct_payment")))
     return {
         "min": round(min(kwh), 3),
         "max": round(max(kwh), 3),

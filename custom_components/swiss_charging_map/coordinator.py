@@ -351,6 +351,7 @@ def group_by_location(stations: dict[str, dict]) -> dict[str, dict]:
         maxs = [c["price_max"] for c in connectors.values() if c.get("price_max") is not None]
         g["price_min"] = min(mins) if mins else None
         g["price_max"] = max(maxs) if maxs else None
+        g["price_currency"] = next((c.get("price_currency") for c in connectors.values() if c.get("price_currency")), None)
         g["price_provider"] = next((c.get("price_provider") for c in connectors.values() if c.get("price_provider")), None)
         g.setdefault("is_synthetic", False)
     return merged
